@@ -112,15 +112,33 @@ if "clienti_dict" not in st.session_state:
         "Verdi Impianti": {"prezzo_ora": 48.0, "prezzo_km": 0.55}
     }
 
-# --- CONNESSIONE AL DATABASE (GOOGLE SHEETS) ---
+# --- CONNESSIONE AL DATABASE (GOOGLE SHEETS) CONTROLLATA ---
 conn_disponibile = False
 try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df_database = conn.read(ttl="10s")  
+    # Costruiamo il dizionario delle credenziali forzandolo dai Secrets di Streamlit
+    credenziali_sheets = {
+        "type": "service_account",
+        "project_id": st.secrets["connections"]["gsheets"]["project_id"],
+        "private_key_id": st.secrets["connections"]["gsheets"]["private_key_id"],
+        "private_key": st.secrets["connections"]["gsheets"]["private_key"],
+        "client_email": st.secrets["connections"]["gsheets"]["client_email"],
+        "client_id": st.secrets["connections"]["gsheets"]["client_id"],
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": st.secrets["connections"]["gsheets"]["client_x509_cert_url"]
+    }
+    
+    # Avviamo la connessione iniettando le credenziali in modo esplicito
+    conn = st.connection("gsheets", type=GSheetsConnection, credentials=credenziali_sheets)
+    
+    # Lettura dei dati usando l'URL memorizzato nei Secrets
+    df_database = conn.read(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], ttl="0s")  
     df_database = df_database.dropna(how="all")
     st.session_state.rapportini = df_database.to_dict(orient="records")
     conn_disponibile = True
 except Exception as e:
+    st.sidebar.error(f"⚠️ Errore Connessione Database: {e}")
     if "rapportini" not in st.session_state:
         st.session_state.rapportini = [
             {"cliente": "Rossi Costruzioni", "cantiere": "Cantiere Via Roma 12", "data": "2026-05-16", "km": 45, "ore": 7.5, "spese": 10.0, "note": "Configura Google Sheets per salvare i dati reali."}
@@ -152,7 +170,7 @@ def clean_txt(text):
     if not text or str(text) == "nan": return ""
     return str(text).replace("€", "\x80").encode('latin-1', 'replace').decode('latin-1')
 
-# Funzione corretta per costringere i checkbox a escludersi a vicenda
+# Esclusione reciproca dinamica dei checkbox
 def chiudi_altro_flag(flag_modificato):
     if flag_modificato == "iva":
         if st.session_state.chk_iva:
@@ -161,7 +179,7 @@ def chiudi_altro_flag(flag_modificato):
         if st.session_state.chk_rev:
             st.session_state.chk_iva = False
 
-# Funzione per trovare il logo sul server (case-insensitive)
+# Ricerca automatica del logo sul server
 def trova_percorso_logo():
     for nome in ["logo.jpg", "LOGO.jpg", "logo.jpeg", "LOGO.JPEG"]:
         if os.path.exists(nome):
@@ -331,13 +349,14 @@ elif menu == "Nuovo Rapportino":
             if conn_disponibile:
                 try:
                     df_aggiornato = pd.DataFrame(st.session_state.rapportini)
+                    # Forza il salvataggio ri-specificando esplicitamente la sorgente per eliminare i bug di cache
                     conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], data=df_aggiornato)
                     st.cache_data.clear()  
                     st.success("Rapportino salvato permanentemente su Google Fogli!")
                 except Exception as e:
                     st.error(f"Errore durante il salvataggio sul cloud: {e}")
             else:
-                st.warning("Rapportino salvato localmente (Database Google Sheets non rilevato).")
+                st.warning("Rapportino salvato localmente (Database Google Sheets non abilitato).")
 
 elif menu == "Report Mensili e Clienti":
     st.title("Generazione Report Avanzati")
@@ -347,7 +366,6 @@ elif menu == "Report Mensili e Clienti":
     st.markdown('<div class="card">🛠️ **Opzioni di Calcolo Fiscale**', unsafe_allow_html=True)
     c_iva1, c_iva2 = st.columns(2)
     
-    # Checkbox agganciati correttamente allo stato interno per escludersi a vicenda
     with c_iva1: 
         attiva_iva = st.checkbox("Calcola Aliquota IVA", key="chk_iva", on_change=chiudi_altro_flag, args=("iva",))
     with c_iva2: 
@@ -384,7 +402,6 @@ elif menu == "Report Mensili e Clienti":
             
         st.markdown(f"## **Totale Dovuto:** € {totale_imponibile + iva_calcolata:,.2f}")
             
-        # Controllo visivo per segnalare all'amministratore se manca fpdf sul server cloud
         if not PDF_AVAILABLE:
             st.error("⚠️ Errore di sistema: Generatore PDF non disponibile. Assicurati che 'fpdf' sia inserito nel file requirements.txt su GitHub.")
         else:
