@@ -112,28 +112,15 @@ if "clienti_dict" not in st.session_state:
         "Verdi Impianti": {"prezzo_ora": 48.0, "prezzo_km": 0.55}
     }
 
-# --- CONNESSIONE AL DATABASE (GOOGLE SHEETS) CONTROLLATA ---
+# --- CONNESSIONE AL DATABASE (GOOGLE SHEETS) ---
 conn_disponibile = False
 try:
-    # Costruiamo il dizionario delle credenziali forzandolo dai Secrets di Streamlit
-    credenziali_sheets = {
-        "type": "service_account",
-        "project_id": st.secrets["connections"]["gsheets"]["project_id"],
-        "private_key_id": st.secrets["connections"]["gsheets"]["private_key_id"],
-        "private_key": st.secrets["connections"]["gsheets"]["private_key"],
-        "client_email": st.secrets["connections"]["gsheets"]["client_email"],
-        "client_id": st.secrets["connections"]["gsheets"]["client_id"],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": st.secrets["connections"]["gsheets"]["client_x509_cert_url"]
-    }
+    # MODIFICA: Streamlit legge automaticamente tutto dal file secrets.toml o dai secrets del Cloud.
+    # Non passiamo più l'argomento esplicito 'credentials' per evitare l'errore.
+    conn = st.connection("gsheets", type=GSheetsConnection)
     
-    # Avviamo la connessione iniettando le credenziali in modo esplicito
-    conn = st.connection("gsheets", type=GSheetsConnection, credentials=credenziali_sheets)
-    
-    # Lettura dei dati usando l'URL memorizzato nei Secrets
-    df_database = conn.read(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], ttl="0s")  
+    # MODIFICA: Rimosso il parametro 'spreadsheet', l'URL viene ereditato in automatico dai secrets.
+    df_database = conn.read(ttl="0s")  
     df_database = df_database.dropna(how="all")
     st.session_state.rapportini = df_database.to_dict(orient="records")
     conn_disponibile = True
@@ -349,8 +336,9 @@ elif menu == "Nuovo Rapportino":
             if conn_disponibile:
                 try:
                     df_aggiornato = pd.DataFrame(st.session_state.rapportini)
-                    # Forza il salvataggio ri-specificando esplicitamente la sorgente per eliminare i bug di cache
-                    conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], data=df_aggiornato)
+                    # MODIFICA: Rimosso l'indirizzamento esplicito allo spreadsheet tramite st.secrets, 
+                    # adesso lavora globalmente con la configurazione ereditata.
+                    conn.update(data=df_aggiornato)
                     st.cache_data.clear()  
                     st.success("Rapportino salvato permanentemente su Google Fogli!")
                 except Exception as e:
