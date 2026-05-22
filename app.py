@@ -115,15 +115,14 @@ if "clienti_dict" not in st.session_state:
 # --- CONNESSIONE AL DATABASE (GOOGLE SHEETS) ---
 conn_disponibile = False
 try:
-    # Recuperiamo in modo sicuro i dati dal file dei segreti
+    # MODIFICA: Estrazione manuale dei dati dal file dei segreti per evitare errori di configurazione automatica
     gsheets_secrets = st.secrets["connections"]["gsheets"]
     
-    # Creiamo un dizionario di credenziali pulito da passare all'API di Google
     credenziali_dict = {
         "type": gsheets_secrets["type"],
         "project_id": gsheets_secrets["project_id"],
         "private_key_id": gsheets_secrets["private_key_id"],
-        "private_key": gsheets_secrets["private_key"].replace("\\n", "\n"),  # Sistema i ritorni a capo della chiave
+        "private_key": gsheets_secrets["private_key"].replace("\\n", "\n"),  
         "client_email": gsheets_secrets["client_email"],
         "client_id": gsheets_secrets["client_id"],
         "auth_uri": gsheets_secrets["auth_uri"],
@@ -133,10 +132,9 @@ try:
         "universe_domain": gsheets_secrets["universe_domain"]
     }
     
-    # Inizializziamo la connessione passando esplicitamente le credenziali e il link dello spreadsheet
+    # Inizializzazione della connessione indicando esplicitamente le credenziali e l'URL
     conn = st.connection("gsheets", type=GSheetsConnection, credentials=credenziali_dict)
     
-    # Forziamo la lettura puntando direttamente all'URL del tuo foglio
     df_database = conn.read(spreadsheet=gsheets_secrets["spreadsheet"], ttl="0s")  
     df_database = df_database.dropna(how="all")
     st.session_state.rapportini = df_database.to_dict(orient="records")
@@ -353,7 +351,7 @@ elif menu == "Nuovo Rapportino":
             if conn_disponibile:
                 try:
                     df_aggiornato = pd.DataFrame(st.session_state.rapportini)
-                    # Passiamo esplicitamente l'URL dello spreadsheet anche in scrittura
+                    # MODIFICA: Salvataggio con puntamento manuale all'URL dello spreadsheet
                     conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], data=df_aggiornato)
                     st.cache_data.clear()  
                     st.success("Rapportino salvato permanentemente su Google Fogli!")
