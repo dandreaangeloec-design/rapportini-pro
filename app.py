@@ -124,7 +124,15 @@ except Exception as e:
     st.sidebar.error(f"⚠️ Errore Connessione Database: {e}")
     if "rapportini" not in st.session_state:
         st.session_state.rapportini = [
-            {"cliente": "Rossi Costruzioni", "cantiere": "Cantiere Via Roma 12", "data": "2026-05-16", "km": 45, "ore": 7.5, "spese": 10.0, "note": "Configura Google Sheets per salvare i dati reali."}
+            {
+                "cliente": "Rossi Costruzioni",
+                "cantiere": "Cantiere Via Roma 12",
+                "data": "2026-05-16",
+                "km": 45,
+                "ore": 7.5,
+                "spese": 10.0,
+                "note": "Configura Google Sheets per salvare i dati reali."
+            }
         ]
 
 # Inizializzazione stati per i checkbox mutualmente esclusivi
@@ -167,8 +175,8 @@ def trova_percorso_logo():
     for nome in ["Image1.jpg", "LOGO.jpg", "logo.jpeg", "LOGO.JPEG"]:
         if os.path.exists(nome):
             return nome
-    if os.path.exists("Gemini_Generated_Image_9pe1fw9pe1fw9pe1.jpeg"):
-        return "Gemini_Generated_Image_9pe1fw9pe1fw9pe1.jpeg"
+    if os.path.exists("Image.jpeg"):
+        return "Image.jpeg"
     return None
 
 # --- FUNZIONI GENERAZIONE PDF ---
