@@ -56,7 +56,7 @@ def get_base64_img(img_path):
     return ""
 
 # Cerca lo sfondo provando sia maiuscole che minuscole
-file_sfondo = "Gemini_Generated_Image_9pe1fw9pe1fw9pe1.jpeg"
+file_sfondo = "Image.jpeg"
 sfondo_base64 = get_base64_img(file_sfondo)
 
 # --- CSS GRAFICA E SFONDO ---
@@ -164,7 +164,7 @@ def chiudi_altro_flag(flag_modificato):
 
 # Ricerca automatica del logo sul server
 def trova_percorso_logo():
-    for nome in ["logo.jpg", "LOGO.jpg", "logo.jpeg", "LOGO.JPEG"]:
+    for nome in ["Image1.jpg", "LOGO.jpg", "logo.jpeg", "LOGO.JPEG"]:
         if os.path.exists(nome):
             return nome
     if os.path.exists("Gemini_Generated_Image_9pe1fw9pe1fw9pe1.jpeg"):
