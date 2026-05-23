@@ -7,6 +7,15 @@ import io
 import os
 import base64
 
+# --- BACKUP AUTOMATICO IN EXCEL ---
+def backup_rapportini_locally(data, backup_dir="backup_rapportini"):
+    os.makedirs(backup_dir, exist_ok=True)
+    now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"rapportini_backup_{now}.xlsx"
+    filepath = os.path.join(backup_dir, filename)
+    df = pd.DataFrame(data)
+    df.to_excel(filepath, index=False)
+
 # Prova a caricare FPDF in modo robusto
 try:
     from fpdf import FPDF
@@ -315,6 +324,8 @@ elif menu == "Nuovo Rapportino":
         else:
             nuovo = {"cliente": cliente, "cantiere": cantiere, "data": str(data), "km": int(km), "ore": float(ore), "spese": float(spese), "note": note}
             st.session_state.rapportini.append(nuovo)
+            # --- BACKUP AUTOMATICO IN EXCEL AD OGNI SALVATAGGIO ---
+            backup_rapportini_locally(st.session_state.rapportini)
             if conn_disponibile:
                 try:
                     df_aggiornato = pd.DataFrame(st.session_state.rapportini)
